@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>戒指精選卷軸轉蛋模擬器</title>
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --card: #ffffff;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --line: #e5e7eb;
+      --accent: #4f46e5;
+      --accent2: #7c3aed;
+      --success: #059669;
+      --danger: #dc2626;
+      --rare: #b45309;
+      --shadow: 0 12px 30px rgba(15, 23, 42, .08);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+                   "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+      color: var(--text);
+      background: linear-gradient(180deg, #eef2ff 0%, var(--bg) 340px);
+    }
+
+    .wrap {
+      width: min(1180px, calc(100% - 28px));
+      margin: 28px auto 60px;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: clamp(28px, 4vw, 44px);
+      letter-spacing: -.03em;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      margin-bottom: 24px;
+    }
+
+    .machine-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+    }
+
+    .machine {
+      background: var(--card);
+      border: 1px solid rgba(255,255,255,.9);
+      border-radius: 20px;
+      padding: 22px;
+      box-shadow: var(--shadow);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .machine::before {
+      content: "";
+      position: absolute;
+      width: 180px;
+      height: 180px;
+      border-radius: 50%;
+      top: -90px;
+      right: -60px;
+      background: radial-gradient(circle, rgba(99,102,241,.20), transparent 70%);
+      pointer-events: none;
+    }
+
+    .machine h2 {
+      margin: 0 0 6px;
+      font-size: 25px;
+    }
+
+    .machine .desc {
+      color: var(--muted);
+      margin-bottom: 18px;
+      font-size: 14px;
+    }
+
+    .buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 9px;
+      margin-bottom: 16px;
+    }
+
+    button {
+      border: 0;
+      border-radius: 12px;
+      padding: 10px 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform .12s ease, opacity .12s ease;
+    }
+
+    button:hover { transform: translateY(-1px); }
+    button:active { transform: translateY(0); }
+
+    .draw-btn {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: white;
+    }
+
+    .ghost-btn {
+      color: var(--text);
+      background: #eef2ff;
+    }
+
+    .danger-btn {
+      color: white;
+      background: var(--danger);
+    }
+
+    .custom-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 18px;
+    }
+
+    input[type="number"] {
+      width: 130px;
+      border: 1px solid var(--line);
+      border-radius: 11px;
+      padding: 10px 12px;
+      font-size: 15px;
+    }
+
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .stat {
+      padding: 13px;
+      border-radius: 14px;
+      background: #f8fafc;
+      border: 1px solid var(--line);
+    }
+
+    .stat .label {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .stat .value {
+      font-size: 22px;
+      font-weight: 800;
+      margin-top: 3px;
+    }
+
+    .result-box {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      min-height: 150px;
+      max-height: 310px;
+      overflow: auto;
+      padding: 12px;
+      background: #fcfcff;
+    }
+
+    .result-empty {
+      color: var(--muted);
+      padding: 28px 10px;
+      text-align: center;
+    }
+
+    .result-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      padding: 9px 6px;
+      border-bottom: 1px dashed var(--line);
+      align-items: center;
+    }
+
+    .result-row:last-child { border-bottom: 0; }
+
+    .item-name {
+      font-weight: 650;
+    }
+
+    .item-prob {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 2px;
+    }
+
+    .count {
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .rarity-ultra .item-name { color: #b91c1c; }
+    .rarity-super .item-name { color: #b45309; }
+    .rarity-rare .item-name { color: #6d28d9; }
+
+    .global {
+      margin-top: 20px;
+      background: var(--card);
+      border-radius: 20px;
+      padding: 22px;
+      box-shadow: var(--shadow);
+    }
+
+    .global-top {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+
+    .global h2 { margin: 0; }
+
+    .notice {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.6;
+      margin-top: 16px;
+    }
+
+    .jackpot {
+      animation: glow .8s ease-in-out infinite alternate;
+      font-weight: 900;
+    }
+
+    @keyframes glow {
+      from { text-shadow: 0 0 3px rgba(220,38,38,.2); }
+      to   { text-shadow: 0 0 12px rgba(220,38,38,.8); }
+    }
+
+    @media (max-width: 860px) {
+      .machine-grid { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 520px) {
+      .summary { grid-template-columns: 1fr; }
+      .custom-row { flex-wrap: wrap; }
+      input[type="number"] { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <h1>戒指精選卷軸轉蛋模擬器</h1>
+    <div class="subtitle">兩台轉蛋機皆依照官方機率進行加權隨機抽取，所有道具皆可交易。</div>
+
+    <section class="machine-grid">
+      <article class="machine" id="machine-I">
+        <h2>轉蛋券 I</h2>
+        <div class="desc">戒指精選卷軸轉蛋券 I（活動限定）</div>
+        <div class="buttons"></div>
+        <div class="custom-row">
+          <input type="number" min="1" max="1000000" value="200" aria-label="自訂抽數">
+          <button class="ghost-btn custom-draw">自訂抽取</button>
+        </div>
+        <div class="summary">
+          <div class="stat"><div class="label">本次抽數</div><div class="value last-draw">0</div></div>
+          <div class="stat"><div class="label">累積抽數</div><div class="value total-draw">0</div></div>
+          <div class="stat"><div class="label">戒指箱</div><div class="value jackpot-count">0</div></div>
+        </div>
+        <div class="result-box"><div class="result-empty">尚未抽取</div></div>
+      </article>
+
+      <article class="machine" id="machine-II">
+        <h2>轉蛋券 II</h2>
+        <div class="desc">戒指精選卷軸轉蛋券 II（活動限定）</div>
+        <div class="buttons"></div>
+        <div class="custom-row">
+          <input type="number" min="1" max="1000000" value="200" aria-label="自訂抽數">
+          <button class="ghost-btn custom-draw">自訂抽取</button>
+        </div>
+        <div class="summary">
+          <div class="stat"><div class="label">本次抽數</div><div class="value last-draw">0</div></div>
+          <div class="stat"><div class="label">累積抽數</div><div class="value total-draw">0</div></div>
+          <div class="stat"><div class="label">戒指箱</div><div class="value jackpot-count">0</div></div>
+        </div>
+        <div class="result-box"><div class="result-empty">尚未抽取</div></div>
+      </article>
+    </section>
+
+    <section class="global">
+      <div class="global-top">
+        <div>
+          <h2>累積背包</h2>
+          <div class="desc">合併顯示兩台轉蛋機累積獲得的所有物品</div>
+        </div>
+        <div class="buttons" style="margin:0">
+          <button class="ghost-btn" id="exportBtn">匯出 CSV</button>
+          <button class="danger-btn" id="resetBtn">全部重置</button>
+        </div>
+      </div>
+      <div class="result-box" id="inventoryBox">
+        <div class="result-empty">尚無累積物品</div>
+      </div>
+      <div class="notice">
+        機率以百分比計算。程式使用瀏覽器的 <code>crypto.getRandomValues()</code> 產生亂數，
+        再依照各道具機率進行加權抽樣。機率總和若有浮點誤差，會自動正規化。
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const commonConsumables = [
+      ["超級藥水10個(可交易)", 6.0214375],
+      ["超級藥水15個(可交易)", 5.8714375],
+      ["超級藥水20個(可交易)", 5.7214375],
+      ["黃昏之露10個(可交易)", 6.1714375],
+      ["黃昏之露30個(可交易)", 6.0214375],
+      ["黃昏之露50個(可交易)", 5.8714375],
+      ["清晨之露20個(可交易)", 6.1714375],
+      ["清晨之露40個(可交易)", 6.0214375],
+      ["清晨之露60個(可交易)", 5.8714375],
+      ["馴鹿奶30個(可交易)", 6.1714375],
+      ["馴鹿奶50個(可交易)", 6.0214375],
+      ["馴鹿奶70個(可交易)", 5.8714375]
+    ];
+
+    const poolII = [
+      ["戒指卷軸箱", 0.0008333331607],
+      ["臉部裝飾敏捷卷軸30%", 0.008333331607],
+      ["臉部裝飾智力卷軸30%", 0.008333331607],
+      ["腰帶力量卷軸30%", 0.01249999968],
+      ["眼部裝飾智力卷軸30%", 0.01249999968],
+      ["墜飾敏捷卷軸30%", 0.01249999968],
+      ["眼部裝飾敏捷卷軸30%", 0.01249999968],
+      ["墜飾幸運卷軸30%", 0.02000000222],
+      ["腰帶智力卷軸30%", 0.02000000222],
+      ["耳環敏捷卷軸30%", 0.02000000222],
+      ["頭盔敏捷卷軸30%", 0.02000000222],
+      ["套服智力詛咒卷軸30%", 0.02000000222],
+      ["拳套攻擊力卷軸30%", 0.03333333552],
+      ["手套攻擊力卷軸30%", 0.03333333552],
+      ["披風幸運卷軸30%", 0.03333333552],
+      ["雙手劍攻擊力卷軸30%", 0.03333333552],
+      ["上衣幸運卷軸30%", 0.03333333552],
+      ["披風力量卷軸30%", 0.03333333552],
+      ["長杖魔力卷軸30%", 0.0888888917],
+      ["弓攻擊力卷軸30%", 0.0888888917],
+      ["耳環幸運卷軸30%", 0.0888888917],
+      ["盾牌幸運卷軸30%", 0.0888888917],
+      ["手套敏捷性卷軸30%", 0.0888888917],
+      ["槍攻擊力卷軸30%", 0.0888888917],
+      ["火槍攻擊力卷軸30%", 0.0888888917],
+      ["盾牌力量卷軸30%", 0.0888888917],
+      ["耳環體力卷軸30%", 0.0888888917],
+      ["鞋子敏捷性卷軸30%", 1.758946425],
+      ["頭盔體力卷軸30%", 1.758946425],
+      ["披風體力卷軸30%", 1.758946425],
+      ["雙手斧攻擊力卷軸30%", 1.758946425],
+      ["雙手劍命中率卷軸30%", 1.758946425],
+      ["單手斧攻擊力卷軸30%", 1.758946425],
+      ["上衣體力卷軸30%", 2.058946425],
+      ["套服防禦詛咒卷軸30%", 2.058946425],
+      ["披風魔力卷軸30%", 2.058946425],
+      ["單手棍攻擊力卷軸30%", 2.058946425],
+      ["雙手斧命中率卷軸30%", 2.058946425],
+      ["盾牌體力卷軸30%", 2.058946425],
+      ["雙手棍命中率卷軸30%", 2.058946425],
+      ["矛命中率卷軸30%", 2.058946425],
+      ...commonConsumables
+    ];
+
+    const poolI = [
+      ["戒指卷軸箱", 0.0008333331607],
+      ["臉部裝飾力量卷軸30%", 0.008333331607],
+      ["臉部裝飾幸運卷軸30%", 0.008333331607],
+      ["眼部裝飾力量卷軸30%", 0.01249999968],
+      ["腰帶敏捷卷軸30%", 0.01249999968],
+      ["墜飾力量卷軸30%", 0.01249999968],
+      ["眼部裝飾幸運卷軸30%", 0.01249999968],
+      ["腰帶幸運卷軸30%", 0.02000000222],
+      ["墜飾智力卷軸30%", 0.02000000222],
+      ["套服力量詛咒卷軸30%", 0.02000000222],
+      ["下衣敏捷性卷軸30%", 0.02000000222],
+      ["耳環智力卷軸30%", 0.02000000222],
+      ["套服幸運詛咒卷軸30%", 0.03333333552],
+      ["頭盔智力卷軸30%", 0.03333333552],
+      ["披風敏捷性卷軸30%", 0.03333333552],
+      ["上衣力量卷軸30%", 0.03333333552],
+      ["短杖魔力卷軸30%", 0.03333333552],
+      ["套服敏捷詛咒卷軸30%", 0.03333333552],
+      ["披風智力卷軸30%", 0.0888888917],
+      ["矛攻擊力卷軸30%", 0.0888888917],
+      ["短劍攻擊力卷軸30%", 0.0888888917],
+      ["指虎攻擊力卷軸30%", 0.0888888917],
+      ["鞋子跳躍力卷軸30%", 0.0888888917],
+      ["指虎命中率卷軸30%", 0.0888888917],
+      ["弩攻擊力卷軸30%", 0.0888888917],
+      ["鞋子移動速度卷軸30%", 0.0888888917],
+      ["下衣跳躍卷軸30%", 0.0888888917],
+      ["下衣體力卷軸30%", 1.758946425],
+      ["單手劍命中率卷軸30%", 1.758946425],
+      ["手套體力卷軸30%", 1.758946425],
+      ["單手劍攻擊力卷軸30%", 1.758946425],
+      ["盾牌防禦力卷軸30%", 1.758946425],
+      ["下衣防禦力卷軸30%", 1.758946425],
+      ["上衣防禦力卷軸30%", 2.058946425],
+      ["頭盔防禦卷軸30%", 2.058946425],
+      ["披風物理防禦力卷軸30%", 2.058946425],
+      ["單手斧命中率卷軸30%", 2.058946425],
+      ["單手棍命中率卷軸30%", 2.058946425],
+      ["雙手棍攻擊力卷軸30%", 2.058946425],
+      ["披風魔法防禦力卷軸30%", 2.058946425],
+      ["槍命中率卷軸30%", 2.058946425],
+      ...commonConsumables
+    ];
+
+    const state = {
+      I: { total: 0, jackpot: 0, inventory: new Map() },
+      II: { total: 0, jackpot: 0, inventory: new Map() }
+    };
+
+    function secureRandom() {
+      const array = new Uint32Array(1);
+      crypto.getRandomValues(array);
+      return array[0] / 4294967296;
+    }
+
+    function preparePool(pool) {
+      const total = pool.reduce((sum, [, p]) => sum + p, 0);
+      let cumulative = 0;
+      return {
+        total,
+        items: pool.map(([name, probability]) => {
+          cumulative += probability;
+          return { name, probability, cumulative };
+        })
+      };
+    }
+
+    const prepared = {
+      I: preparePool(poolI),
+      II: preparePool(poolII)
+    };
+
+    function pick(poolObj) {
+      const r = secureRandom() * poolObj.total;
+      let low = 0;
+      let high = poolObj.items.length - 1;
+
+      while (low < high) {
+        const mid = Math.floor((low + high) / 2);
+        if (r < poolObj.items[mid].cumulative) high = mid;
+        else low = mid + 1;
+      }
+      return poolObj.items[low];
+    }
+
+    function rarityClass(probability) {
+      if (probability <= 0.001) return "rarity-ultra";
+      if (probability <= 0.04) return "rarity-super";
+      if (probability <= 0.1) return "rarity-rare";
+      return "";
+    }
+
+    function formatProb(p) {
+      if (p < 0.01) return p.toFixed(10).replace(/0+$/, "").replace(/\.$/, "");
+      return p.toFixed(7).replace(/0+$/, "").replace(/\.$/, "");
+    }
+
+    function draw(machineKey, count) {
+      count = Number(count);
+      if (!Number.isInteger(count) || count < 1 || count > 1000000) {
+        alert("抽數需為 1 到 1,000,000 的整數");
+        return;
+      }
+
+      const round = new Map();
+      const pool = prepared[machineKey];
+
+      for (let i = 0; i < count; i++) {
+        const item = pick(pool);
+        round.set(item.name, {
+          count: (round.get(item.name)?.count || 0) + 1,
+          probability: item.probability
+        });
+
+        const current = state[machineKey].inventory.get(item.name) || {
+          count: 0,
+          probability: item.probability
+        };
+        current.count += 1;
+        state[machineKey].inventory.set(item.name, current);
+
+        if (item.name === "戒指卷軸箱") {
+          state[machineKey].jackpot += 1;
+        }
+      }
+
+      state[machineKey].total += count;
+      renderMachine(machineKey, round, count);
+      renderInventory();
+      saveState();
+    }
+
+    function sortedEntries(map) {
+      return [...map.entries()].sort((a, b) => {
+        if (a[1].probability !== b[1].probability) {
+          return a[1].probability - b[1].probability;
+        }
+        return b[1].count - a[1].count;
+      });
+    }
+
+    function renderRows(entries) {
+      return entries.map(([name, data]) => `
+        <div class="result-row ${rarityClass(data.probability)}">
+          <div>
+            <span class="item-name ${name === "戒指卷軸箱" ? "jackpot" : ""}">${name}</span>
+            <span class="item-prob">機率 ${formatProb(data.probability)}%</span>
+          </div>
+          <div class="count">× ${data.count.toLocaleString()}</div>
+        </div>
+      `).join("");
+    }
+
+    function renderMachine(machineKey, round, count) {
+      const root = document.getElementById(`machine-${machineKey}`);
+      root.querySelector(".last-draw").textContent = count.toLocaleString();
+      root.querySelector(".total-draw").textContent = state[machineKey].total.toLocaleString();
+      root.querySelector(".jackpot-count").textContent = state[machineKey].jackpot.toLocaleString();
+
+      const box = root.querySelector(".result-box");
+      box.innerHTML = round.size
+        ? renderRows(sortedEntries(round))
+        : '<div class="result-empty">本次沒有結果</div>';
+    }
+
+    function renderInventory() {
+      const merged = new Map();
+
+      for (const machineKey of ["I", "II"]) {
+        for (const [name, data] of state[machineKey].inventory.entries()) {
+          const key = name;
+          const current = merged.get(key) || { count: 0, probability: data.probability };
+          current.count += data.count;
+          current.probability = Math.min(current.probability, data.probability);
+          merged.set(key, current);
+        }
+      }
+
+      const box = document.getElementById("inventoryBox");
+      box.innerHTML = merged.size
+        ? renderRows(sortedEntries(merged))
+        : '<div class="result-empty">尚無累積物品</div>';
+    }
+
+    function setupMachine(machineKey) {
+      const root = document.getElementById(`machine-${machineKey}`);
+      const buttonWrap = root.querySelector(".buttons");
+      [1, 10, 50, 100, 1000].forEach(n => {
+        const btn = document.createElement("button");
+        btn.className = "draw-btn";
+        btn.textContent = `${n.toLocaleString()} 抽`;
+        btn.addEventListener("click", () => draw(machineKey, n));
+        buttonWrap.appendChild(btn);
+      });
+
+      root.querySelector(".custom-draw").addEventListener("click", () => {
+        draw(machineKey, root.querySelector('input[type="number"]').value);
+      });
+    }
+
+    function saveState() {
+      const serializable = {
+        I: {
+          total: state.I.total,
+          jackpot: state.I.jackpot,
+          inventory: [...state.I.inventory.entries()]
+        },
+        II: {
+          total: state.II.total,
+          jackpot: state.II.jackpot,
+          inventory: [...state.II.inventory.entries()]
+        }
+      };
+      localStorage.setItem("ringGachaStateV1", JSON.stringify(serializable));
+    }
+
+    function loadState() {
+      const raw = localStorage.getItem("ringGachaStateV1");
+      if (!raw) return;
+
+      try {
+        const data = JSON.parse(raw);
+        for (const key of ["I", "II"]) {
+          state[key].total = data[key]?.total || 0;
+          state[key].jackpot = data[key]?.jackpot || 0;
+          state[key].inventory = new Map(data[key]?.inventory || []);
+          const root = document.getElementById(`machine-${key}`);
+          root.querySelector(".total-draw").textContent = state[key].total.toLocaleString();
+          root.querySelector(".jackpot-count").textContent = state[key].jackpot.toLocaleString();
+        }
+        renderInventory();
+      } catch (err) {
+        console.error("讀取紀錄失敗", err);
+      }
+    }
+
+    function exportCSV() {
+      const rows = [["轉蛋機", "道具名稱", "機率(%)", "累積數量"]];
+
+      for (const key of ["I", "II"]) {
+        for (const [name, data] of sortedEntries(state[key].inventory)) {
+          rows.push([key, name, data.probability, data.count]);
+        }
+      }
+
+      const csv = rows.map(row =>
+        row.map(value => `"${String(value).replaceAll('"', '""')}"`).join(",")
+      ).join("\n");
+
+      const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "戒指精選卷軸轉蛋紀錄.csv";
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    document.getElementById("resetBtn").addEventListener("click", () => {
+      if (!confirm("確定要清除兩台轉蛋機的全部紀錄嗎？")) return;
+      ["I","II"].forEach(key=>{
+        state[key]={total:0,jackpot:0,inventory:new Map()};
+        const root=document.getElementById(`machine-${key}`);
+        root.querySelector(".last-draw").textContent="0";
+        root.querySelector(".total-draw").textContent="0";
+        root.querySelector(".jackpot-count").textContent="0";
+        root.querySelector(".result-box").innerHTML='<div class="result-empty">尚未抽取</div>';
+      });
+      localStorage.removeItem("ringGachaStateV1");
+      document.getElementById("inventoryBox").innerHTML='<div class="result-empty">尚無累積物品</div>';
+    });
+
+    document.getElementById("exportBtn").addEventListener("click", exportCSV);
+
+    setupMachine("I");
+    setupMachine("II");
+    loadState();
+
+    console.log("轉蛋券 I 機率總和：", prepared.I.total);
+    console.log("轉蛋券 II 機率總和：", prepared.II.total);
+  </script>
+</body>
+</html>
